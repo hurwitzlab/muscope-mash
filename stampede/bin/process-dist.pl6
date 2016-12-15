@@ -5,7 +5,8 @@ subset File of Str where *.IO.f;
 sub MAIN (
     File :$in!,
     Str  :$out="",
-    Str  :$alias-file=""
+    Str  :$alias-file="",
+    Bool :$nearness=False
 ) {
     my %alias;
     if $alias-file && $alias-file.IO.f {
@@ -42,6 +43,9 @@ sub MAIN (
         else {
             my $file = clean-file-name(@flds.shift);
             next if all(@flds) == 1;
+            if $nearness {
+                @flds = @flds.map(1 - *);
+            }
             $out-fh.put(join "\t", flat $file, @flds);
         }
     }
