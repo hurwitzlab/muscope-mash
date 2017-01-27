@@ -10,4 +10,4 @@
 #SBATCH --mail-type BEGIN,END,FAIL
 #SBATCH --mail-user kyclark@email.arizona.edu
 
-run.sh -q "$WORK/pov/fasta" -o "$WORK/pov/mash"
+run.sh -q "$SCRATCH/data/gos/fasta" -o "$SCRATCH/data/gos/muscope-mash"

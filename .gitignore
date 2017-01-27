@@ -2,3 +2,4 @@
 *.err
 job.json
 bin.tgz
+bin/mash

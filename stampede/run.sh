@@ -4,6 +4,8 @@ set -u
 
 QUERY=""
 OUT_DIR=$(pwd)
+NUM_THREADS=12
+NUM_SCANS=10000
 
 function lc() {
   wc -l "$1" | cut -d ' ' -f 1
@@ -17,6 +19,8 @@ function HELP() {
   echo ""
   echo "Options:"
   echo " -o OUT_DIR ($OUT_DIR)"
+  echo " -s NUM_SCANS ($NUM_SCANS)"
+  echo " -t NUM_THREADS ($NUM_THREADS)"
   echo ""
   exit 0
 }
@@ -25,7 +29,7 @@ if [[ $# -eq 0 ]]; then
   HELP
 fi
 
-while getopts :o:q:h OPT; do
+while getopts :o:s:t:q:h OPT; do
   case $OPT in
     h)
       HELP
@@ -35,6 +39,12 @@ while getopts :o:q:h OPT; do
       ;;
     q)
       QUERY="$OPTARG"
+      ;;
+    s)
+      NUM_SCANS="$OPTARG"
+      ;;
+    t)
+      NUM_THREADS="$OPTARG"
       ;;
     :)
       echo "Error: Option -$OPTARG requires an argument."
@@ -46,10 +56,11 @@ while getopts :o:q:h OPT; do
   esac
 done
 
+CWD=$(cd $(dirname $0) && pwd)
 BINTAR="bin.tgz"
 if [[ -e $BINTAR ]]; then
   tar xvf $BINTAR
-  PATH="./bin:$PATH"
+  PATH="$CWD/bin:$PATH"
 fi
 
 QUERY_FILES=$(mktemp)
@@ -73,7 +84,6 @@ fi
 QUERY_SKETCH_DIR="$OUT_DIR/sketches"
 REF_MASH_DIR="$WORK/ohana/mash"
 REF_SKETCH_DIR="$REF_MASH_DIR/sketches"
-MASH="$WORK/bin/mash"
 
 if [[ ! -d $REF_SKETCH_DIR ]]; then
   echo REF_SKETCH_DIR \"$REF_SKETCH_DIR\" does not exist.
@@ -95,18 +105,12 @@ if [[ ! -s ${ALL_QUERY}.msh ]]; then
     if [[ -e "${SKETCH_FILE}.msh" ]]; then
       echo SKETCH_FILE \"$SKETCH_FILE.msh\" exists already.
     else
-      $MASH sketch -o "$SKETCH_FILE" "$FILE"
+      mash sketch -p $NUM_THREADS -o "$SKETCH_FILE" "$FILE"
     fi
   done < $QUERY_FILES
 
-  echo Making ALL_QUERY \"$ALL_QUERY\" 
-
-  QUERY_SKETCHES=$(mktemp)
-  find "$QUERY_SKETCH_DIR" -name \*.msh > "$QUERY_SKETCHES"
-  $MASH paste -l "$ALL_QUERY" "$QUERY_SKETCHES"
-
   rm "$QUERY_FILES"
-  rm "$QUERY_SKETCHES"
+
 fi
 ALL_QUERY=${ALL_QUERY}.msh
 
@@ -125,20 +129,60 @@ if [[ ! -s "${ALL_REF}.msh" ]]; then
     exit 1
   fi
 
-  echo "Pasting \"$NUM_MASH\" files to ALL_REF \"$ALL_REF\""
-  $MASH paste -l "$ALL_REF" "$MSH_FILES"
   rm "$MSH_FILES"
 fi
-ALL_REF=${ALL_REF}.msh
 
-echo "DIST $(basename $ALL_QUERY) $(basename $ALL_REF)"
+ALL_FILES="${OUT_DIR}/all-files.txt"
+find "$QUERY_SKETCH_DIR" -name \*.msh > "$ALL_FILES"
+find "$REF_SKETCH_DIR" -name \*.msh  >> "$ALL_FILES"
+
+if [[ -e "$ALL_FILES" ]]; then
+  echo "Created ALL_FILES \"$ALL_FILES\""
+fi
+
+ALL_MASH="${OUT_DIR}/all"
+
+if [[ -e "$ALL_MASH.msh" ]]; then
+  rm "$ALL_MASH.msh"
+fi
+
+mash paste -l $ALL_MASH $ALL_FILES
+
+ALL_MASH="$ALL_MASH.msh"
+
+if [[ -e "$ALL_MASH" ]]; then
+  echo "Created ALL_MASH \"$ALL_MASH\""
+fi
+
 DISTANCE_MATRIX="${OUT_DIR}/mash-dist.txt"
-echo "DISTANCE_MATRIX \"${DISTANCE_MATRIX}\""
-$MASH dist -t "$ALL_QUERY" "$ALL_REF" > "$DISTANCE_MATRIX"
-rm "$ALL_QUERY"
+mash dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
+
+if [[ -e "$DISTANCE_MATRIX" ]]; then
+  echo "Created DISTANCE_MATRIX \"${DISTANCE_MATRIX}\""
+fi
 
 echo "Fixing dist output"
+FIXED_DIST="$OUT_DIR/distance.txt"
 
-process-dist.pl6 --in="$DISTANCE_MATRIX" --out="$OUT_DIR/distance.txt"
+process-dist.pl6 --in="$DISTANCE_MATRIX" --out="$FIXED_DIST"
 
-echo "Done."
+if [[ -e "$FIXED_DIST" ]]; then
+  echo "Created FIXED_DIST \"$FIXED_DIST\""
+  sna.r -f "$FIXED_DIST" -o "$OUT_DIR" -n "$NUM_SCANS"
+
+  for FILE in gbme.out Z table1.tex; do
+    TMP="$OUT_DIR/$FILE"
+    if [[ -e "$TMP" ]]; then
+      rm $TMP
+    fi
+  done
+
+  SNA="$OUT_DIR/sna-gbme.pdf"
+  if [[ -e "$SNA" ]]; then
+    echo "Finished SNA, see \"$SNA\""
+  else
+    echo "Something went wrong."
+  fi
+fi
+
+echo "Comments to kyclark@email.arizona.edu"
