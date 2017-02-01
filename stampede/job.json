@@ -1,0 +1,8 @@
+{
+  "name": "json",
+  "appId": "muSCOPE-Mash-0.0.1",
+  "archive": false,
+  "inputs": {
+    "QUERY": "agave://data.iplantcollaborative.org/kyclark/data/gos/fasta"
+  }
+}
