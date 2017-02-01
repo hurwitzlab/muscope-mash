@@ -57,12 +57,22 @@ while getopts :o:s:t:q:h OPT; do
 done
 
 CWD=$(cd $(dirname $0) && pwd)
-BINTAR="bin.tgz"
-if [[ -e $BINTAR ]]; then
-  tar xvf $BINTAR
+SCRIPTS="$CWD/scripts.tgz"
+if [[ -e $SCRIPTS ]]; then
+  echo "Untarring $SCRIPTS to bin"
+  if [[ ! -d bin ]]; then
+    mkdir bin
+  fi
+  tar -C bin -xvf $SCRIPTS
+fi
+
+if [[ -e "$CWD/bin" ]]; then
   PATH="$CWD/bin:$PATH"
 fi
 
+#
+# Mash sketching
+#
 QUERY_FILES=$(mktemp)
 if [[ -d $QUERY  ]]; then
   find $QUERY -type f > $QUERY_FILES
@@ -86,7 +96,7 @@ REF_MASH_DIR="$WORK/ohana/mash"
 REF_SKETCH_DIR="$REF_MASH_DIR/sketches"
 
 if [[ ! -d $REF_SKETCH_DIR ]]; then
-  echo REF_SKETCH_DIR \"$REF_SKETCH_DIR\" does not exist.
+  echo "REF_SKETCH_DIR \"$REF_SKETCH_DIR\" does not exist."
   exit 1
 fi
 
@@ -99,19 +109,19 @@ fi
 #
 ALL_QUERY="$OUT_DIR/query-$$"
 if [[ ! -s ${ALL_QUERY}.msh ]]; then
-  echo Sketching NUM_FILES \"$NUM_FILES\"
+  echo "Sketching NUM_FILES \"$NUM_FILES\""
   while read FILE; do
     SKETCH_FILE="$QUERY_SKETCH_DIR/$(basename $FILE)"
     if [[ -e "${SKETCH_FILE}.msh" ]]; then
-      echo SKETCH_FILE \"$SKETCH_FILE.msh\" exists already.
+      echo "SKETCH_FILE \"$SKETCH_FILE.msh\" exists already."
     else
       mash sketch -p $NUM_THREADS -o "$SKETCH_FILE" "$FILE"
     fi
   done < $QUERY_FILES
 
   rm "$QUERY_FILES"
-
 fi
+
 ALL_QUERY=${ALL_QUERY}.msh
 
 #
@@ -132,57 +142,33 @@ if [[ ! -s "${ALL_REF}.msh" ]]; then
   rm "$MSH_FILES"
 fi
 
-ALL_FILES="${OUT_DIR}/all-files.txt"
-find "$QUERY_SKETCH_DIR" -name \*.msh > "$ALL_FILES"
-find "$REF_SKETCH_DIR" -name \*.msh  >> "$ALL_FILES"
+#
+# Run Mash on everything first
+#
+run-mash.sh "$REF_SKETCH_DIR" "$QUERY_SKETCH_DIR" "$OUT_DIR" "$NUM_SCANS" "$OUT_DIR"
 
-if [[ -e "$ALL_FILES" ]]; then
-  echo "Created ALL_FILES \"$ALL_FILES\""
+#
+# Check for outliers, run again if necessary
+#
+DIST="$OUT_DIR/distance.txt"
+
+if [[ ! -f $DIST ]]; then
+  echo "Cannot find distance file \"$DIST\""
+  exit 1
 fi
 
-ALL_MASH="${OUT_DIR}/all"
+DIST_NO_OUTLIERS="$OUT_DIR/distance-no-outliers.txt"
+echo "Checking for outliers"
+RESULT=$(outliers.py -d "$DIST" -o "$DIST_NO_OUTLIERS")
 
-if [[ -e "$ALL_MASH.msh" ]]; then
-  rm "$ALL_MASH.msh"
-fi
+echo $RESULT
 
-mash paste -l $ALL_MASH $ALL_FILES
+if [[ $RESULT != "No outliers" ]] && [[ -s "$DIST_NO_OUTLIERS" ]]; then
+  echo "Will re-run Mash now"
 
-ALL_MASH="$ALL_MASH.msh"
+  mv "$OUT_DIR/sna-gbme.pdf" "$OUT_DIR/sna-gbme-with-outliers.pdf"
 
-if [[ -e "$ALL_MASH" ]]; then
-  echo "Created ALL_MASH \"$ALL_MASH\""
-fi
-
-DISTANCE_MATRIX="${OUT_DIR}/mash-dist.txt"
-mash dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
-
-if [[ -e "$DISTANCE_MATRIX" ]]; then
-  echo "Created DISTANCE_MATRIX \"${DISTANCE_MATRIX}\""
-fi
-
-echo "Fixing dist output"
-FIXED_DIST="$OUT_DIR/distance.txt"
-
-process-dist.pl6 --in="$DISTANCE_MATRIX" --out="$FIXED_DIST"
-
-if [[ -e "$FIXED_DIST" ]]; then
-  echo "Created FIXED_DIST \"$FIXED_DIST\""
-  sna.r -f "$FIXED_DIST" -o "$OUT_DIR" -n "$NUM_SCANS"
-
-  for FILE in gbme.out Z table1.tex; do
-    TMP="$OUT_DIR/$FILE"
-    if [[ -e "$TMP" ]]; then
-      rm $TMP
-    fi
-  done
-
-  SNA="$OUT_DIR/sna-gbme.pdf"
-  if [[ -e "$SNA" ]]; then
-    echo "Finished SNA, see \"$SNA\""
-  else
-    echo "Something went wrong."
-  fi
+  run-mash.sh "$REF_SKETCH_DIR" "$QUERY_SKETCH_DIR" "$OUT_DIR" "$NUM_SCANS" "$DIST_NO_OUTLIERS"
 fi
 
 echo "Comments to kyclark@email.arizona.edu"

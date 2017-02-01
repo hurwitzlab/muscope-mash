@@ -10,4 +10,10 @@
 #SBATCH --mail-type BEGIN,END,FAIL
 #SBATCH --mail-user kyclark@email.arizona.edu
 
-run.sh -q "$SCRATCH/data/gos/fasta" -o "$SCRATCH/data/gos/muscope-mash"
+OUT_DIR="$SCRATCH/data/gos/muscope-mash/gos"
+
+if [[ -d $OUT_DIR ]]; then
+  rm -rf $OUT_DIR
+fi
+
+run.sh -q "$SCRATCH/data/gos/fasta" -o $OUT_DIR

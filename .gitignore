@@ -1,5 +1,5 @@
 *.out
 *.err
-job.json
-bin.tgz
-bin/mash
+*.swp
+*.tgz
+bin
