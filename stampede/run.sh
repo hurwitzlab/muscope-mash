@@ -77,7 +77,8 @@ QUERY_FILES=$(mktemp)
 if [[ -d $QUERY  ]]; then
   find $QUERY -type f > $QUERY_FILES
 else
-  echo $QUERY > $QUERY_FILES
+  find $QUERY -type f > $QUERY_FILES
+  #echo $QUERY > $QUERY_FILES
 fi
 
 NUM_FILES=$(lc "$QUERY_FILES")
@@ -92,7 +93,8 @@ if [[ ! -d $OUT_DIR ]]; then
 fi
 
 QUERY_SKETCH_DIR="$OUT_DIR/sketches"
-REF_MASH_DIR="$WORK/ohana/mash"
+KYC_WORK=/work/03137/kyclark
+REF_MASH_DIR="$KYC_WORK/ohana/mash"
 REF_SKETCH_DIR="$REF_MASH_DIR/sketches"
 
 if [[ ! -d $REF_SKETCH_DIR ]]; then
