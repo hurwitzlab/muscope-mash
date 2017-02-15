@@ -61,7 +61,7 @@ if [[ -e "$ALL_MASH" ]]; then
 fi
 
 DISTANCE_MATRIX="${OUT_DIR}/mash-dist.txt"
-${WORK}/mash/mash dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
+${WORK}/local/mash/mash dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
 
 if [[ -e "$DISTANCE_MATRIX" ]]; then
   echo "Created DISTANCE_MATRIX \"${DISTANCE_MATRIX}\""
