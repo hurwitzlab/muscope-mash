@@ -13,6 +13,8 @@ OUT_DIR=$3
 NUM_SCANS=$4
 FILES_LIST=${5:-''}
 
+MASH=${WORK}/local/mash/mash
+
 #
 # "all-files" will hold all the file names we want to compare
 #
@@ -52,7 +54,7 @@ if [[ -e "$ALL_MASH.msh" ]]; then
   rm "$ALL_MASH.msh"
 fi
 
-mash paste -l $ALL_MASH $ALL_FILES
+${MASH} paste -l $ALL_MASH $ALL_FILES
 
 ALL_MASH="$ALL_MASH.msh"
 
@@ -61,7 +63,7 @@ if [[ -e "$ALL_MASH" ]]; then
 fi
 
 DISTANCE_MATRIX="${OUT_DIR}/mash-dist.txt"
-mash dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
+${MASH} dist -t "$ALL_MASH" "$ALL_MASH" > "$DISTANCE_MATRIX"
 
 if [[ -e "$DISTANCE_MATRIX" ]]; then
   echo "Created DISTANCE_MATRIX \"${DISTANCE_MATRIX}\""
@@ -70,7 +72,7 @@ fi
 echo "Fixing dist output"
 FIXED_DIST="$OUT_DIR/distance.txt"
 
-process-dist.pl6 --in="$DISTANCE_MATRIX" --out="$FIXED_DIST"
+process-dist.py --in="$DISTANCE_MATRIX" --out="$FIXED_DIST"
 
 if [[ -e "$FIXED_DIST" ]]; then
   echo "Created FIXED_DIST \"$FIXED_DIST\""

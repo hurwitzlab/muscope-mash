@@ -1,5 +1,8 @@
 #!/bin/bash
 
+module load gcc/4.9.3
+module load python3
+
 set -u
 
 QUERY=""
