@@ -117,7 +117,7 @@ if [[ ! -s ${ALL_QUERY}.msh ]]; then
     if [[ -e "${SKETCH_FILE}.msh" ]]; then
       echo "SKETCH_FILE \"$SKETCH_FILE.msh\" exists already."
     else
-      mash sketch -p $NUM_THREADS -o "$SKETCH_FILE" "$FILE"
+      ${WORK}/local/mash/mash sketch -p $NUM_THREADS -o "$SKETCH_FILE" "$FILE"
     fi
   done < $QUERY_FILES
 

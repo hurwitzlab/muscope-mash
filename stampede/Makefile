@@ -1,4 +1,4 @@
-APP = muscope-mash-0.0.2
+APP = muscope-mash-0.0.3
 
 test: clean
 	sbatch test.sh
@@ -7,7 +7,7 @@ clean:
 	find . \( -name \*.conf -o -name \*.out -o -name \*.log -o -name \*.param -o -name launcher-\* \) -exec rm {} \;
 
 upload: clean
-	files-upload -F $(WORK)/$(APP) kyclark/applications
+	files-upload -F $(WORK)/$(APP) $(CYVERSEUSER)/applications
 
 update:
 	apps-addupdate -F app.json
